@@ -1,0 +1,28 @@
+Port:
+    !id (Num)
+    city (Str)
+    country (Str)
+
+Ship:
+    !ship (Str)
+
+Cruise:
+    !id (Num)
+    ship (Str) -> Ship.ship
+    boarding (Num) -> Port.id
+
+PackageType:
+    !name (Str)
+    description (Str)
+    cruise.id (Num) -> Cruise.id
+
+Package:
+    !name (Str)
+    !cruise.id (Num) -> Cruise.id
+    type (Str) -> PackageType.name
+    price (Dec)
+
+# All the planned cruises
+Departure:
+    !cruise.id (Num)
+    date (Date)
