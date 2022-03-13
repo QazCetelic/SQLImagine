@@ -1,4 +1,4 @@
-# SQLImagine
+# ![Logo](graphics/logo_32.svg) SQLImagine
 A tool for quickly and easily designing SQL databases using a DSL
 
 ## Domain Specific Language
