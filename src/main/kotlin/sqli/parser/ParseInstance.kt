@@ -129,13 +129,13 @@ class ParseInstance {
         return mostCommonIndentOrNull ?: "\t"
     }
 
-    enum class LogType {
+    private enum class LogType {
         WARNING,
         ERROR,
         INFO;
     }
 
-    fun LogType.log(message: String, line: Int, column: Int? = null) {
+    private fun LogType.log(message: String, line: Int, column: Int? = null) {
         val s = buildString {
             append(line)
             if (column != null) {
