@@ -1,7 +1,5 @@
 # SQLImagine
-A tool for quickly and easily designing SQL databases using a DSL.
-
-![Logo](graphics/logo_small.svg)
+A tool for quickly and easily designing SQL databases using a DSL
 
 ## Domain Specific Language
 SQLImagine comes with a DSL for defining tables, attributes, and relationships called SQL-imagine, the file format is `.sqli`.
