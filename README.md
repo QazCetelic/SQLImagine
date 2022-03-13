@@ -1,10 +1,11 @@
 # ![Logo](graphics/logo_32.svg) SQLImagine
-A tool for quickly and easily designing SQL databases using a DSL
+A tool for quickly and easily designing SQL databases using a DSL and export it to [SQL](#sql-script-export).
 
 ## Domain Specific Language
-SQLImagine comes with a DSL for defining tables, attributes, and relationships called SQL-imagine, the file format is `.sqli`.
-The parser is also able to return a reformatted existing scripts written in the DSL by calling `.serialize()` on the parsed DSL.
-You can use the syntax highlighting from `YAML` because the DSL's syntax is similar.
+### Syntax
+SQLImagine allows for defining tables, attributes, and relationships.
+I recommend using [YAML](https://yaml.org) syntax highlighting because the DSL's syntax has a few similarities.
+The recommended file extension is `.sqli`.
 
 ```yaml
 # It's possible to add comments.
@@ -27,16 +28,8 @@ Manufacturer:
   parent_company? (Str) -> Manufacturer.name
 ```
 
-Parsing is done using the `ParseInstance` class.
-It has several accessible properties:
-
-|  Property  | Description                                                      |
-|:----------:|:-----------------------------------------------------------------|
-|  `tables`  | All parsed tables                                                |
-|  `errors`  | All errors, issues that prevent the script from properly parsing |
-| `warnings` | All warnings, issues that aren't critical but do require changes |
-| `success`  | Whether there are any critical issues                            |
-|   `time`   | The amount of milliseconds it took to parse the DSL              |
+### Usage
+Parsing is done using the `ParseInstance` class. It's created with a script as a string.
 
 ```kotlin
 val scriptFile: File = …
@@ -45,6 +38,17 @@ val parsed = ParseInstance(sqli)
 // Print out a formatted version of the script.
 println(parsed)
 ```
+
+The parser is also able to reformat existing scripts by calling `.serialize()` on the created `ParseInstance`.
+The class also has several accessible properties:
+
+|  Property  | Description                                                      |
+|:----------:|:-----------------------------------------------------------------|
+|  `tables`  | All parsed tables                                                |
+|  `errors`  | All errors, issues that prevent the script from properly parsing |
+| `warnings` | All warnings, issues that aren't critical but do require changes |
+| `success`  | Whether there are any critical issues                            |
+|   `time`   | The amount of milliseconds it took to parse the DSL              |
 
 ## SQL script export
 You can export the parsed DSL as a SQL script by using the `Sequelizer` class on the parsed DSL.
