@@ -2,8 +2,7 @@ package sqli.parser
 
 import kotlin.system.measureTimeMillis
 
-data class Location(val line: Int, val column: Int?)
-data class Issue(val message: String, val location: Location)
+data class Issue(val message: String, val line: Int, val column: Int?)
 
 class ParseInstance {
     val tables: List<Table>
@@ -30,38 +29,62 @@ class ParseInstance {
                 // Trims to reduce complexity for parsing
                 .trimIndent().lines()
 
-            scriptIndent = getScriptIndent(lines)
-
-            // Parse lines individually
-            tokens =  lines
-                .mapIndexed { index, line -> processLine(line, index) }
-                // map operation is split in 2 parts so errors can be added to the list
-                .map { it ?: throw IllegalArgumentException("Invalid script") }
+            scriptIndent = lines.prevailingIndent()
+            tokens =  lines.toTokens()
 
             val logicalTokens = tokens.filter { it !is DecorationToken }
             if (!verifyTokenOrder(logicalTokens)) throw IllegalStateException("Invalid token order")
 
-            val foundTables = mutableListOf<Table>()
-            tokens.forEachIndexed { i, token ->
-                if (token is TableToken) {
-                    val attributes = buildList {
-                        // Starts loop after current token
-                        tokens.drop(i + 1).forEach { token2 ->
-                            when (token2) {
-                                is AttributeToken -> add(token2)
-                                is TableToken -> return@forEach
-                            }
-                        }
-                    }.map { Pair(it.name, Attribute(Type.fromString(it.type), it.primaryKey, it.nullable, it.references)) }
-
-                    foundTables += Table(token.name, attributes.toMap())
-                }
-            }
-
-            verifyReferences(tokens, foundTables)
-            tables = foundTables
+            tables = tokens.parseTables()
+            verifyReferences(tokens, tables)
             if (errors.isNotEmpty()) throw IllegalArgumentException("Invalid script")
         }
+    }
+
+    private fun List<AbstractToken>.parseTables(): List<Table> {
+        val foundTables = mutableListOf<Table>()
+        this@parseTables.forEachIndexed { i, token ->
+            if (token is TableToken) {
+                val attributeTokens = buildList {
+                    // Starts loop after current token
+                    this@parseTables.drop(i + 1).forEach { token2 ->
+                        when (token2) {
+                            is AttributeToken -> add(token2)
+                            is TableToken -> return@forEach
+                        }
+                    }
+                }.map { Pair(it.name, Attribute(Type.fromString(it.type), it.primaryKey, it.nullable, it.references)) }
+
+                foundTables += Table(token.name, attributeTokens.toMap())
+            }
+        }
+        return foundTables
+    }
+
+    /**
+     * @return the script's most common indent or tab if nothing is found
+     */
+    private fun List<String>.prevailingIndent(): String {
+        return this
+            // First creates a pair so the indent only has to be trimmed once
+            .map { Pair(it, it.trimIndent()) }
+            // Filters out lines without indent
+            .filter { it.first != it.second }
+            .groupBy { it.first.removeSuffix(it.second) }
+            .mapValues { it.value.size }
+            .maxByOrNull { it.value }
+            ?.key
+            ?: "\t"
+    }
+
+    /**
+     * Parses lines individually and throws an exception if an error is found after finishing
+     */
+    private fun List<String>.toTokens(): List<AbstractToken> {
+        return this
+            .mapIndexed { index, line -> processLine(line, index) }
+            // map operation is split in 2 parts so the entire script is parsed before throwing exceptions
+            .map { it ?: throw IllegalArgumentException("Invalid script") }
     }
 
     /**
@@ -81,7 +104,7 @@ class ParseInstance {
                         ?: false
 
                     if (!referenceFound) {
-                        LogType.ERROR.log("Reference to an attribute called ${reference.second} in a table called ${reference.first} is not found", line = i, column = null)
+                        log("Reference to an attribute called ${reference.second} in a table called ${reference.first} is not found", line = i, column = null, critical = true)
                     }
                 }
             }
@@ -97,14 +120,14 @@ class ParseInstance {
                 is TableToken -> {
                     val nextToken = tokens.getOrNull(line + 1)
                     if (nextToken !is AttributeToken) {
-                        LogType.WARNING.log("Table must be followed by an attribute", line = line, column = null)
+                        log("Table must be followed by an attribute", line = line, column = null, critical = false)
                         return false
                     }
                 }
                 is AttributeToken -> {
                     tokens.getOrNull(line - 1)?.let {
                         if (it is WhitespaceToken) {
-                            LogType.WARNING.log("Attribute must be preceded by a table", line = line, column = null)
+                            log("Attribute must be preceded by a table", line = line, column = null, critical = false)
                             return false
                         }
                     }
@@ -114,28 +137,7 @@ class ParseInstance {
         return true
     }
 
-    private fun getScriptIndent(lines: List<String>): String {
-        // Gets the script's indent
-        val mostCommonIndentOrNull: String? = lines
-            // First creates a pair so the indent only has to be trimmed once
-            .map { Pair(it, it.trimIndent()) }
-            // Filters out lines without indent
-            .filter { it.first != it.second }
-            .groupBy { it.first.removeSuffix(it.second) }
-            .mapValues { it.value.size }
-            .maxByOrNull { it.value }
-            ?.key
-
-        return mostCommonIndentOrNull ?: "\t"
-    }
-
-    private enum class LogType {
-        WARNING,
-        ERROR,
-        INFO;
-    }
-
-    private fun LogType.log(message: String, line: Int, column: Int? = null) {
+    private fun log(message: String, line: Int, column: Int? = null, critical: Boolean) {
         val s = buildString {
             append(line)
             if (column != null) {
@@ -143,14 +145,16 @@ class ParseInstance {
                 append(column)
             }
             append(" [")
-            append(this@log)
+            append(when (critical) {
+                false -> "WARNING"
+                true -> "ERROR"
+            })
             append("] ")
             append(message)
         }
-        when (this) {
-            LogType.WARNING -> warnings += Issue(message, Location(line, column))
-            LogType.ERROR -> errors     += Issue(message, Location(line, column))
-            else -> {}
+        when (critical) {
+            false -> warnings += Issue(message, line, column)
+            true -> errors += Issue(message, line, column)
         }
         System.err.println(s)
     }
@@ -174,9 +178,9 @@ class ParseInstance {
 
     private fun processTable(lineText: String, line: Int): AbstractToken? {
         if (!lineText[0].isUpperCase())
-            LogType.WARNING.log("Table names should start with an uppercase letter", line, column = 0)
+            log("Table names should start with an uppercase letter", line, column = 0, critical = false)
         if (!lineText.endsWith(':'))
-            LogType.WARNING.log("Table declaration should end with a colon", line, column = lineText.lastIndex)
+            log("Table declaration should end with a colon", line, column = lineText.lastIndex, critical = false)
 
         val invalidColumns = mutableSetOf<Int>()
         lineText.removeSuffix(":").forEachIndexed { i, c ->
@@ -185,7 +189,7 @@ class ParseInstance {
         if (invalidColumns.isNotEmpty()) {
             // Logs an error for every character that isn't valid
             for (column in invalidColumns) {
-                LogType.ERROR.log("Table declaration can only contain letters or underscores", line, column)
+                log("Table declaration can only contain letters or underscores", line, column, critical = false)
             }
             return null
         }
@@ -201,7 +205,7 @@ class ParseInstance {
         val foundIndent: String = line.takeWhile(Char::isWhitespace)
         val validIndent = (scriptIndent != foundIndent)
         if (validIndent) {
-            LogType.WARNING.log("Indentation is not consistent, got '${foundIndent.indentEscape()}' while expecting '${scriptIndent.indentEscape()}'", index, column = null)
+            log("Indentation is not consistent, got '${foundIndent.indentEscape()}' while expecting '${scriptIndent.indentEscape()}'", index, column = null, critical = false)
         }
         return validIndent
     }
@@ -230,7 +234,7 @@ class ParseInstance {
             else -> {
                 var lastIndexWithLength = 0
                 for (s in referencesSplit.drop(2)) {
-                    LogType.ERROR.log("There are ${referencesSplit.size - 2} arrows more than allowed", line = index, column = lastIndexWithLength)
+                    log("There are ${referencesSplit.size - 2} arrows more than allowed", line = index, column = lastIndexWithLength, critical = true)
                     lastIndexWithLength += s.length
                 }
                 return null
@@ -244,7 +248,7 @@ class ParseInstance {
         // Validate attribute
         val type = when (attributeWithTypeSplit.size) {
             1 -> {
-                LogType.WARNING.log("No type specified, add '(TYPE)' after the attribute name", line = index, column = null)
+                log("No type specified, add '(TYPE)' after the attribute name", line = index, column = null, critical = false)
 
                 "Str" // Fallback type
             }
@@ -255,7 +259,7 @@ class ParseInstance {
                 typeResult.first
             }
             else -> {
-                LogType.ERROR.log("Invalid attribute", line = index, column = null)
+                log("Invalid attribute", line = index, column = null, critical = true)
                 return null
             }
         }
@@ -269,7 +273,7 @@ class ParseInstance {
             }
             if (notLowerCaseIndexes.isNotEmpty()) {
                 for (i in notLowerCaseIndexes) {
-                    LogType.WARNING.log("Character in '$name' should be lowercase", line = index, column = i)
+                    log("Character in '$name' should be lowercase", line = index, column = i, critical = false)
                 }
             }
             val primaryKey = nameWithProperties.startsWith('!')
@@ -279,7 +283,7 @@ class ParseInstance {
                 it.split(", ").map {
                     val p = it.split('.')
                     if (p.size != 2) {
-                        LogType.ERROR.log("Reference '$it' has an invalid amount of dots", line = index, column = null)
+                        log("Reference '$it' has an invalid amount of dots", line = index, column = null, critical = true)
                         return null
                     }
                     val (table, attribute) = p
@@ -290,7 +294,7 @@ class ParseInstance {
             return AttributeToken(name, type, primaryKey, nullable, references)
         }
         else {
-            LogType.ERROR.log("'$name' is an invalid attribute name", line = index, column = null)
+            log("'$name' is an invalid attribute name", line = index, column = null, critical = true)
             return null
         }
     }
@@ -304,13 +308,13 @@ class ParseInstance {
 
         if (invalidType) {
             val types = Type.values().joinToString(separator = ", ")
-            LogType.ERROR.log("'$trimmed' is not a valid type ($types)", line = index, column = columnIndex)
+            log("'$trimmed' is not a valid type ($types)", line = index, column = columnIndex, critical = true)
         }
         if (improperCase) {
-            LogType.WARNING.log("Attribute type should be capitalized lowercase", line = index, column = columnIndex)
+            log("Attribute type should be capitalized lowercase", line = index, column = columnIndex, critical = false)
         }
         if (!hasBrackets) {
-            LogType.WARNING.log("Attribute type should be surrounded by brackets", line = index, column = columnIndex)
+            log("Attribute type should be surrounded by brackets", line = index, column = columnIndex, critical = false)
         }
 
         return Pair(trimmed, invalidType)
