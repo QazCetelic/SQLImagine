@@ -35,30 +35,37 @@ class ParseInstance {
             val logicalTokens = tokens.filter { it !is DecorationToken }
             if (!verifyTokenOrder(logicalTokens)) throw IllegalStateException("Invalid token order")
 
-            tables = tokens.parseTables()
+            tables = logicalTokens.parseTables()
             verifyReferences(tokens, tables)
             if (errors.isNotEmpty()) throw IllegalArgumentException("Invalid script")
         }
     }
 
     private fun List<AbstractToken>.parseTables(): List<Table> {
-        val foundTables = mutableListOf<Table>()
-        this@parseTables.forEachIndexed { i, token ->
+        val tableTokenIndexes = mutableListOf<Int>()
+        for (i in indices) {
+            val token = this[i]
             if (token is TableToken) {
-                val attributeTokens = buildList {
-                    // Starts loop after current token
-                    this@parseTables.drop(i + 1).forEach { token2 ->
-                        when (token2) {
-                            is AttributeToken -> add(token2)
-                            is TableToken -> return@forEach
-                        }
-                    }
-                }.map { Pair(it.name, Attribute(Type.fromString(it.type), it.primaryKey, it.nullable, it.references)) }
-
-                foundTables += Table(token.name, attributeTokens.toMap())
+                tableTokenIndexes.add(i)
             }
         }
-        return foundTables
+        val tableGroups = mutableListOf<Pair<TableToken, List<AttributeToken>>>()
+        for (i in tableTokenIndexes.indices) {
+            val currentIndex = tableTokenIndexes[i]
+            val nextIndex = tableTokenIndexes.getOrNull(i + 1) ?: lastIndex
+            val tableToken: TableToken = this[currentIndex] as TableToken
+            val attributeTokens: List<AttributeToken> = this.subList(currentIndex + 1, nextIndex).map { it as AttributeToken }
+            tableGroups += Pair(tableToken, attributeTokens)
+        }
+        return tableGroups.map { (tableToken, attributeTokens) ->
+            val attributeMap: Map<String, Attribute> = attributeTokens.associate { token ->
+                val name = token.name
+                val attribute =
+                    Attribute(Type.fromString(token.type), token.primaryKey, token.nullable, token.references)
+                Pair(name, attribute)
+            }
+            Table(tableToken.name, attributeMap)
+        }
     }
 
     /**
@@ -84,7 +91,7 @@ class ParseInstance {
         return this
             .mapIndexed { index, line -> processLine(line, index) }
             // map operation is split in 2 parts so the entire script is parsed before throwing exceptions
-            .map { it ?: throw IllegalArgumentException("Invalid script") }
+            .map { it ?: throw Exception("Invalid script") }
     }
 
     /**
