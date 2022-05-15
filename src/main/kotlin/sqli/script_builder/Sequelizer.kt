@@ -62,13 +62,7 @@ class Sequelizer {
     }
 
     private fun sequelizeType(type: Type): String {
-        return when (type) {
-            Type.INT -> "INTEGER"
-            Type.DEC -> "FLOAT"
-            Type.STR -> "VARCHAR(64)"
-            Type.BOOL -> "TINYINT(1)"
-            Type.DATE -> "DATE"
-        }
+        return "${type.name}${type.size?.let { "<$it>" } ?: ""}"
     }
 
 }

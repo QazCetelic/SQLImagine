@@ -6,7 +6,33 @@ import GrammarParser.Table_declareContext
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 
-object Parser {
+class Parser {
+    companion object {
+        /**
+         * - STR:   VARCHAR<64>
+         * - INT:   INTEGER
+         * - DEC:   FLOAT
+         * - BOOL:  TINYINT<1>
+         * - DATE:  DATE
+         */
+        val DEFAULT_ALIASES = mapOf(
+            "STR" to "VARCHAR<64>",
+            "INT" to "INTEGER",
+            "DEC" to "FLOAT",
+            "BOOL" to "TINYINT<1>",
+            "DATE" to "DATE",
+        )
+    }
+    
+    private val aliases: Map<String, String>
+
+    /**
+     * @see [Parser.DEFAULT_ALIASES]
+     */
+    constructor(aliases: Map<String, String> = DEFAULT_ALIASES) {
+        this.aliases = aliases
+    }
+    
     fun parse(input: String): List<Table> {
         val cleaned = input.replace("\r", "")
         val lexer = GrammarLexer(CharStreams.fromString(cleaned))
@@ -34,7 +60,7 @@ object Parser {
         val referenceDeclarations = attributeDeclare.reference_declare()?.REFERENCED_ATTRIBUTE_NAME()
         val references = (referenceDeclarations ?: emptyList()).map { it.text }
         val attribute = Attribute(
-            Type.valueOf(type.uppercase()),
+            Type(type),
             primaryKey,
             nullable,
             references.map { it.split('.').let { Pair(it[0], it[1]) } },
