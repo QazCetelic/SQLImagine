@@ -17,10 +17,3 @@ data class Table(
             return referenced
         }
 }
-
-data class Attribute(
-    val type: Type,
-    val primaryKey: Boolean,
-    val nullable: Boolean,
-    val references: List<Pair<String, String>>,
-)
