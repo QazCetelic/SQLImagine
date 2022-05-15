@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.6.0"
+    antlr
 }
 
 group = "me.qaz"
@@ -19,6 +20,12 @@ dependencies {
         // Get the jar at https://github.com/QazCetelic/Kwing/releases
         "$projectDir/../../JSwing/Kwing/build/libs/Kwing-0.1.0.jar"
     ))
+    antlr("org.antlr:antlr4:4.9.3")
+}
+
+tasks.generateGrammarSource {
+    // Allows importing of grammar
+    arguments.addAll(listOf("-lib", "src/main/antlr/"))
 }
 
 tasks.test {

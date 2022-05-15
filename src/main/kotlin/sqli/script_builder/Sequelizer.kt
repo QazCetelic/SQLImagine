@@ -1,7 +1,6 @@
 package sqli.script_builder
 
 import sqli.parser.Attribute
-import sqli.parser.ParseInstance
 import sqli.parser.Table
 import sqli.parser.Type
 
@@ -19,8 +18,8 @@ class Sequelizer {
         this.indent = indent
     }
 
-    fun sequelize(parsed: ParseInstance): String {
-        return parsed.tables.joinToString(separator = "\n") { sequelizeTable(it) }
+    fun sequelize(parsed: List<Table>): String {
+        return parsed.joinToString(separator = "\n") { sequelizeTable(it) }
     }
 
     private fun sequelizeTable(table: Table): String {
@@ -64,12 +63,11 @@ class Sequelizer {
 
     private fun sequelizeType(type: Type): String {
         return when (type) {
-            Type.Num -> "INTEGER"
-            Type.Dec -> "FLOAT"
-            Type.Str -> "VARCHAR(64)"
-            Type.Bool -> "TINYINT(1)"
-            Type.Date -> "DATE"
-            else -> TODO("Type not implemented yet")
+            Type.INT -> "INTEGER"
+            Type.DEC -> "FLOAT"
+            Type.STR -> "VARCHAR(64)"
+            Type.BOOL -> "TINYINT(1)"
+            Type.DATE -> "DATE"
         }
     }
 

@@ -1,28 +1,29 @@
 Port:
-    !id (Num)
+    !id (Int)
     city (Str)
     country (Str)
+    tourist_attraction (Str?)
 
 Ship:
     !ship (Str)
 
 Cruise:
-    !id (Num)
+    !id (Int)
     ship (Str) -> Ship.ship
-    boarding (Num) -> Port.id
+    boarding (Int) -> Port.id
 
 PackageType:
     !name (Str)
-    description (Str)
-    cruise.id (Num) -> Cruise.id
+    description (Str?)
+    cruise (Int) -> Cruise.id
 
 Package:
     !name (Str)
-    !cruise.id (Num) -> Cruise.id
+    !cruise (Int) -> Cruise.id
     type (Str) -> PackageType.name
     price (Dec)
 
 # All the planned cruises
 Departure:
-    !cruise.id (Num)
+    !cruise (Int)
     date (Date)
