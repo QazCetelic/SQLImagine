@@ -2,7 +2,7 @@ grammar Grammar;
 
 // All spacing is ignored
 SPACING : (' ' | '\t')+ -> skip;
-COMMENT : ('#' ~'\n'*) -> skip;
+COMMENT : (('#' ~'\n'*) | ('/*' (~'/')* '*/')) -> skip;
 
 /*
     TYPES
