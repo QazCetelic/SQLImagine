@@ -62,7 +62,7 @@ class Sequelizer {
     }
 
     private fun sequelizeType(type: Type): String {
-        return "${type.name}${type.size?.let { "<$it>" } ?: ""}"
+        return "${type.name}${type.size?.let { "($it)" } ?: ""}"
     }
 
 }

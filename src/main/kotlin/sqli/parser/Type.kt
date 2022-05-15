@@ -8,16 +8,18 @@ class Type {
         this.size = size
     }
 
-    constructor(s: String) {
-        val sizeOpen = s.indexOf('<')
-        val sizeClose = s.indexOf('>')
+    constructor(parser: Parser, s: String) {
+        val aliases = parser.aliases
+        val s2 = aliases.getOrDefault(s.uppercase(), s)
+        val sizeOpen = s2.indexOf('<')
+        val sizeClose = s2.indexOf('>')
         if (sizeOpen == -1 /* && sizeClose == -1, implied*/) {
-            name = s
+            name = s2
             size = null
         }
         else {
-            name = s.substring(0, sizeOpen).uppercase()
-            size = s.substring(sizeOpen, sizeClose).toInt()
+            name = s2.substring(0, sizeOpen).uppercase()
+            size = s2.substring(sizeOpen, sizeClose).drop(1).toInt()
         }
     }
 }

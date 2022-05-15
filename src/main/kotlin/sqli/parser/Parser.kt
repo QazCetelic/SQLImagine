@@ -24,7 +24,7 @@ class Parser {
         )
     }
     
-    private val aliases: Map<String, String>
+    val aliases: Map<String, String>
 
     /**
      * @see [Parser.DEFAULT_ALIASES]
@@ -60,7 +60,7 @@ class Parser {
         val referenceDeclarations = attributeDeclare.reference_declare()?.REFERENCED_ATTRIBUTE_NAME()
         val references = (referenceDeclarations ?: emptyList()).map { it.text }
         val attribute = Attribute(
-            Type(type),
+            Type(this, type),
             primaryKey,
             nullable,
             references.map { it.split('.').let { Pair(it[0], it[1]) } },
