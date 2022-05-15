@@ -9,11 +9,7 @@ data class Table(
     }
 
     internal val referenced: Set<String>
-        get() {
-            val referenced = mutableSetOf<String>()
-            attributes.values.forEach {
-                referenced.addAll(it.references.map { it.first })
-            }
-            return referenced
-        }
+        get() = attributes.values.map { attribute ->
+                    attribute.references.map { it.first }
+                }.flatten().toSet()
 }
