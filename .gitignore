@@ -1,2 +1,4 @@
 # Project exclude paths
 /.gradle/
+
+src/test/kotlin/Main.kt
