@@ -11,6 +11,7 @@ class Sequelizer {
 
     private val indent: String
     private val database: String
+    private fun dbPrefix() = if (database.isBlank()) "" else "$database."
 
     constructor(database: String, indent: String = "  ") {
         this.database = database
@@ -19,49 +20,63 @@ class Sequelizer {
     }
 
     fun sequelize(parsed: List<Table>): String {
-        return parsed.joinToString(separator = "\n") { sequelizeTable(it) }
+        return listOf(
+            "SET FOREIGN_KEY_CHECKS=0;",
+            dropAll(parsed),
+            parsed.joinToString(separator = "\n") { table(it) },
+            "SET FOREIGN_KEY_CHECKS=1;"
+        ).joinToString(separator = "\n")
     }
 
-    private fun sequelizeTable(table: Table): String {
+    private fun dropAll(tables: List<Table>): String {
+        return listOf(
+            "-- Removes the old ${tables.joinToString(separator = ", ") { it.name }} tables if they exists",
+            tables.joinToString(separator = "\n") { table ->
+                "DROP TABLE IF EXISTS ${dbPrefix()}${table.name};"
+            }
+        ).joinToString(separator = "\n")
+    }
+
+    private fun table(table: Table): String {
         val attributes = table.attributes.entries.map { it.toPair() }
-        val dbName = "${database}.${table.name}"
-        return buildString {
-            append("-- Removes the old table if it exists")
-            append('\n')
-            append("DROP TABLE IF EXISTS $dbName;")
-            append('\n')
-            append("CREATE TABLE $dbName (")
-            append('\n')
-            append(sequelizeAttributes(attributes))
-            append('\n')
-            append(");")
-        }
+        val dbName = "${dbPrefix()}${table.name}"
+        return listOf(
+            "CREATE TABLE $dbName (",
+            attributes(attributes),
+            ");"
+        ).joinToString(separator = "\n")
     }
 
-    private fun sequelizeAttributes(attributes: List<Pair<String, Attribute>>): String {
-        val fields = attributes.joinToString("\n") {
-            sequelizeAttribute(it).prependIndent(indent) + ","
+    private fun attributes(attributes: List<Pair<String, Attribute>>): String {
+        val fields = attributes.joinToString(",\n") {
+            attribute(it).prependIndent(indent)
         }
-        val foreignKeys = attributes.filter { it.second.references.isNotEmpty() }.joinToString("\n") {
-            val (name, attribute) = it
-            val reference = attribute.references.first()
-            "FOREIGN KEY (${name}) REFERENCES ${reference.first}(${reference.second})".prependIndent(indent) + ","
-        }
-        return "$fields\n$foreignKeys".trimEnd().removeSuffix(",")
+        val primaryKeys = ("PRIMARY KEY" + attributes
+            .filter { it.second.primaryKey }
+            .joinToString(separator = ", ", prefix = "(", postfix = ")") { escape(it.first) }).prependIndent(indent)
+        val foreignKeys = attributes
+            .filter { it.second.references.isNotEmpty() }
+            .joinToString(",\n") {
+                val (name, attribute) = it
+                val reference = attribute.references.first()
+                "FOREIGN KEY (${escape(name)}) REFERENCES ${reference.first}(${escape(reference.second)})".prependIndent(indent)
+            }
+        return listOf(fields, primaryKeys, foreignKeys).filter { it.isNotBlank() }.joinToString(separator = ",\n")
     }
 
-    private fun sequelizeAttribute(namedAttribute: Pair<String, Attribute>): String {
+    private fun attribute(namedAttribute: Pair<String, Attribute>): String {
         val (name, attribute) = namedAttribute
         return buildString {
-            append(name)
+            append(escape(name))
             append(" ")
-            append(sequelizeType(attribute.type))
-            if (attribute.primaryKey) append(" PRIMARY KEY")
+            append(type(attribute.type))
             if (attribute.nullable) append(" NULL")
         }
     }
 
-    private fun sequelizeType(type: Type): String {
+    private fun escape(s: String) = "`$s`"
+
+    private fun type(type: Type): String {
         return "${type.name}${type.size?.let { "($it)" } ?: ""}"
     }
 
