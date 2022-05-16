@@ -27,19 +27,19 @@ class Parser {
     val aliases: Map<String, String>
 
     /**
+     * @param aliases - map of aliases
      * @see [Parser.DEFAULT_ALIASES]
      */
     constructor(aliases: Map<String, String> = DEFAULT_ALIASES) {
-        this.aliases = aliases
+        this.aliases = aliases.mapKeys { it.key.uppercase() }
     }
     
     fun parse(input: String): List<Table> {
         val cleaned = input.replace("\r", "")
         val lexer = GrammarLexer(CharStreams.fromString(cleaned))
-        val commonTokenStream = CommonTokenStream(lexer)
-        val parser = GrammarParser(commonTokenStream)
-        val tablesDeclarations = parser.main().table_declare()
-        val tables = tablesDeclarations.map { table(it) }
+        val parser = GrammarParser(CommonTokenStream(lexer))
+        val tableDeclarations = parser.main().table_declare()
+        val tables = tableDeclarations.map { table(it) }
         verifyReferences(tables)
         return tables
     }
