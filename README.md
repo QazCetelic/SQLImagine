@@ -59,10 +59,3 @@ val sql: String = sequelizer.sequelize(parsed)
 ```
 
 ![Example](graphics/usage.png)
-
-## TODO
-
-- [ ] Improve type system
-- [ ] Add support for more SQL dialects
-- [ ] Consider dealing with 1 to 1, 1 to n and n to n relationships
-- [ ] Restructure code
