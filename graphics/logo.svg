@@ -1,22 +1,3 @@
-<svg viewBox="0 0 255 285" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <style>
-        .purple {
-            fill: #A055FF;
-        }
-        .grey {
-            fill: #888888;
-        }
-        .darken {
-            fill: black;
-            fill-opacity: 0.1;
-        }
-    </style>    
-    <ellipse class="purple" cx="108" cy="225" rx="73" ry="38"/>
-    <rect class="purple" x="35" y="82" width="146" height="146"/>
-    <ellipse class="purple" cx="108" cy="80" rx="73" ry="38"/>
-    <ellipse class="darken" cx="108" cy="80" rx="73" ry="38" />
-    <ellipse class="grey" cx="210" cy="258" rx="44" ry="23"/>
-    <rect class="grey" x="166" y="174" width="88" height="88"/>
-    <ellipse class="grey" cx="210" cy="173" rx="44" ry="23"/>
-    <ellipse class="darken" cx="210" cy="173" rx="44" ry="23"/>
-</svg>
+version https://git-lfs.github.com/spec/v1
+oid sha256:d1a2375752551b1bc115bc48e0965d76eb4337c2f51d54109a3a434c32057cb5
+size 811

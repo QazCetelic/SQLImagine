@@ -11,7 +11,8 @@ class Sequelizer {
 
     private val indent: String
     private val database: String
-    private fun dbPrefix() = if (database.isBlank()) "" else "$database."
+    private val databasePrefix: String
+        get() = if (database.isBlank()) "" else "$database."
 
     constructor(database: String, indent: String = "  ") {
         this.database = database
@@ -32,14 +33,14 @@ class Sequelizer {
         return listOf(
             "-- Removes the old ${tables.joinToString(separator = ", ") { it.name }} tables if they exists",
             tables.joinToString(separator = "\n") { table ->
-                "DROP TABLE IF EXISTS ${dbPrefix()}${table.name};"
+                "DROP TABLE IF EXISTS ${databasePrefix}${table.name};"
             }
         ).joinToString(separator = "\n")
     }
 
     private fun table(table: Table): String {
         val attributes = table.attributes.entries.map { it.toPair() }
-        val dbName = "${dbPrefix()}${table.name}"
+        val dbName = "${databasePrefix}${table.name}"
         return listOf(
             "CREATE TABLE $dbName (",
             attributes(attributes),

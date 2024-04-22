@@ -3,12 +3,12 @@ package sqli.parser
 class Type {
     val name: String
     val size: Int?
-    constructor(name: String, size: Int?) {
+    internal constructor(name: String, size: Int?) {
         this.name = name
         this.size = size
     }
 
-    constructor(parser: Parser, s: String) {
+    internal constructor(parser: Parser, s: String) {
         val aliases = parser.aliases
         val s2 = aliases.getOrDefault(s.uppercase(), s)
         val sizeOpen = s2.indexOf('<')

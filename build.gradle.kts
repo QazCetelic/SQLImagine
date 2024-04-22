@@ -21,6 +21,7 @@ dependencies {
         "$projectDir/../../JSwing/Kwing/build/libs/Kwing-0.1.0.jar"
     ))
     antlr("org.antlr:antlr4:4.9.3")
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 tasks.generateGrammarSource {
@@ -34,4 +35,12 @@ tasks.test {
 
 tasks.withType<KotlinCompile>() {
     kotlinOptions.jvmTarget = "1.8"
+}
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.kotlinOptions {
+    jvmTarget = "1.8"
+}
+val compileTestKotlin: KotlinCompile by tasks
+compileTestKotlin.kotlinOptions {
+    jvmTarget = "1.8"
 }

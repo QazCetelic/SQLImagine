@@ -2,3 +2,7 @@
 /.gradle/
 
 src/test/kotlin/Main.kt
+
+/build/
+
+*.sql
